@@ -12,8 +12,9 @@ import Vision
 
 struct ContentView: View {
     @State private var selectedImage: UIImage?
+    @State private var output: String?
     @State private var isImagePickerPresented = false
-    @State private var sourceType: UIImagePickerController.SourceType = .photoLibrary
+    @State private var sourceType: UIImagePickerController.SourceType = .camera
 
     var body: some View {
         VStack {
@@ -30,6 +31,9 @@ struct ContentView: View {
                     .foregroundColor(.gray)
             }
             Spacer()
+            Text(output ?? "Nothig yet...")
+                .font(.largeTitle)
+
             HStack {
                 Button("Camera") {
                     sourceType = .camera
@@ -46,7 +50,7 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $isImagePickerPresented) {
-            ImagePicker(selectedImage: $selectedImage, sourceType: sourceType)
+            ImagePicker(selectedImage: $selectedImage, output: $output, sourceType: sourceType)
         }
     }
 }
@@ -87,13 +91,13 @@ class ImagePickerCoordinator: NSObject, UINavigationControllerDelegate, UIImageP
         }
 
 
-        let request = VNCoreMLRequest(model: model) { (request, error) in
+        let request = VNCoreMLRequest(model: model) { [weak self] (request, error) in
             guard let results = request.results as? [VNClassificationObservation] else {
                 fatalError("cant classify image")
             }
 
             
-            print(results.map { $0.identifier })
+            self?.parent.output = results.first?.identifier
         }
 
         let handler = VNImageRequestHandler(ciImage: image)
@@ -109,6 +113,7 @@ class ImagePickerCoordinator: NSObject, UINavigationControllerDelegate, UIImageP
 struct ImagePicker: UIViewControllerRepresentable {
     @Environment(\.presentationMode) var presentationMode
     @Binding var selectedImage: UIImage?
+    @Binding var output: String?
 
     var sourceType: UIImagePickerController.SourceType
 
